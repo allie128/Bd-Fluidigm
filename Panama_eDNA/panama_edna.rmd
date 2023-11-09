@@ -1,0 +1,426 @@
+---
+title: "Panama eDNA ambig"
+output: github_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Let's load the libraries we will need
+
+```{r}
+
+library(Biostrings)
+library(phangorn)
+library(stringr)
+library(tidyverse)
+library(seqinr)
+#library(XVector)
+#BiocManager::install("muscle")
+library(muscle)
+#install.packages("seqRFLP")
+library(seqRFLP)
+library(ips)
+
+```
+
+First, we point to a folder where we have the set of global ambiguities sequences for the whole genome samples. 
+```{r}
+
+setwd("~/OneDrive/Documents/byrne_allison/Bd-Fluidigm/Panama_eDNA/ambiguities")
+
+#Now let's list the files in that folder
+files <- list.files("./ambiguities")
+
+#10 files 
+
+```
+
+
+Now, we want to test a missing data cutoff. We will start with a maximum of 90% missing data (at least 20 amplicons)
+First, we create a table with sample names and the length
+
+First, we need to remove all the sequences in the files that are either too long (>200bp) or too short (<90)
+min predicted sequences is 103bp and max is 162 so we will add a buffer to that number and trim
+
+First, we should replace the PANA primer names with AB primer names that go beyond 194. This function strips the AB from the original primers and codes the PANA primers as 195-243. It also removed all unmerged reads from the file. 
+
+```{r}
+
+files <- list.files(".")
+
+#read in the table that contains the primer lookup table - names Panama_primer_lookup_table.csv
+
+match_table1 <- read.csv(file.choose())
+
+
+
+
+#write a function to rename the primer in run2 consensus files
+
+rename_primers_pana <- function(run_v2_file, match_table1){
+  
+  file <- readDNAStringSet(run_v2_file)
+  
+  names <- sapply(names(file), function(x) unlist(strsplit(x, split=":"))[2])
+  names <- sapply(names , function(x) unlist(strsplit(x, split="merged"))[1])
+  names <- gsub('.{1}$', '', names)
+  
+  for (i in 1:length(names)){
+    match_num <- match(names[i],match_table1[,2])
+    if (i==1){
+    newnames <- match_table1[match_num,1]
+    } else {
+    newnames <- append(newnames, match_table1[match_num,1])
+    }
+  }
+  file <- file[which(!is.na(newnames))] 
+  newnames <- na.omit(newnames)
+  
+  names(file) <- newnames
+  
+  writeXStringSet(file, format="fasta",file=paste(run_v2_file,"_primerfix.fasta",sep='') )
+}
+
+#run the function for all the files
+
+for (i in 1:length(files)){
+  rename_primers_pana(files[i], match_table1)
+}
+
+
+```
+
+Now, we want to test a missing data cutoff. We will start with a maximum of 90% missing data (at least 20 amplicons)
+First, we create a table with sample names and the length
+
+First, we need to remove all the sequences in the files that are either too long (>200bp) or too short (<90)
+min predicted sequences is 103bp and max is 162 so we will add a buffer to that number and trim
+
+^already did this and have _trim files
+
+```{r}
+files <- list.files(".")
+files_p <-grep("primerfix",files,value=TRUE)
+
+for (i in 1: length(files_p)){
+    seq <- readDNAStringSet(files_p[i])
+    keep <- which((width(seq)>90) & (width(seq)<201))
+    seq_trim <- seq[keep]
+    writeXStringSet(seq_trim, format="fasta",file=paste(files_p[i],"_trim.fasta",sep='') )
+}
+
+files <- list.files(".")
+
+files_trim <-grep("_trim",files,value=TRUE)
+
+```
+
+Now let's see how many sequences we have for each primer/sample
+
+
+```{r}
+length_table <- tibble(sample = "", length=0, file_trim="")
+
+samplenames <- sapply(files_trim, function(x)unlist(strsplit(x,split=".fasta_primerfix.fasta_trim"))[1])
+samplenames <- sapply(samplenames, function(x) unlist(strsplit(x, split="Sample."))[2])
+
+#seq <- readDNAStringSet(files_trim[2])
+
+  for (i in 1: length(files_trim)){
+    seq <- readDNAStringSet(files_trim[i], format = "fasta")
+    length_table <- add_row(length_table, sample=samplenames[i], length=length(seq), file_trim=files_trim[i])
+  }
+
+
+hist(as.numeric(length_table$length), breaks=50)
+
+write.csv(length_table, file="edna_length_table_cleaned.csv")
+
+files_90 <- filter(length_table, length>0)
+filenames_90 <- files_90$file_trim
+
+#21 have at least 1 (8 samples)
+
+
+
+```
+
+Now that we have the samples selected, let's fill in a matrix m with the sequences. Each row is a sample and each column is a locus.
+
+```{r}
+
+seq1 <- readDNAStringSet(filenames_90[1])
+
+#to incorporate new sample increase the matrix size to 260 because I converted the PANA primers by adding a 2 before the PANA#
+
+m <-matrix(NA, nrow=nrow(files_90), ncol=243)
+colnames(m) <- seq(1,243)
+rownames(m) <- files_90$sample
+
+seq_matrix <- as_tibble(m)
+
+
+for (i in 1:length(filenames_90)){
+  
+  seq <- readDNAStringSet(filenames_90[i])
+  
+  for (j in 1:length(seq)){
+    
+    col_match <- as.numeric(names(seq))
+    m[i,col_match[j]] <- as.character(seq[j])
+     }
+}
+
+```
+
+Now we have a matrix m with samples as rows and primers as columns. First we can eliminate primers with no data. Let's get the average length of each sequence to determine which has no data. We can also find the min max and mean sequence length to identify potential bad sequences. 
+
+```{r}
+
+n_bases <- matrix(NA, nrow=ncol(m), ncol=7)
+n_bases[,1] <- colnames(m)
+  
+for (i in 1:ncol(m)){
+  n_bases[i,2] <- mean(nchar(m[,i]),na.rm=T)
+  n_bases[i,3] <- min(nchar(m[,i]),na.rm=T)
+  n_bases[i,4] <- max(nchar(m[,i]),na.rm=T)
+  n_bases[i,5] <- median(nchar(m[,i]),na.rm=T)
+  n_bases[i,6] <- max(nchar(m[,i]),na.rm=T) - min(nchar(m[,i]),na.rm=T)
+  n_bases[i,7] <- sum(is.na(m[,i]))
+}
+
+colnames(n_bases) <- c("amp","mean","min","max","median","diff","sum")
+
+minall <- as.numeric(n_bases[,3])
+maxall <- as.numeric(n_bases[,4])
+
+
+diffs <- maxall - minall
+
+```
+
+
+Here is where we get specific for eDNA samples. I want to take each individual sample and pull out only the amplicons that it has for it and each of the reference sequences. 
+
+```{r}
+#here are the 8 samples we are interested in.
+#e_150608_JL
+#e_160608_AR
+#e_160714_L
+#e_MAN_L
+#e_MAR_AL
+#eDNA_MANL
+#eDNA_SofiaR_P
+#eDNA_SOFR_1z
+
+#this pulls out the amplicons present in the edna samples
+ind <- which((rownames(m)=="e_150608_JL"))
+goodamps <- which(!is.na((m[ind,])))
+
+ind <- which((rownames(m)=="e_160608_AR"))
+goodamps <- which(!is.na((m[ind,])))
+
+ind <- which((rownames(m)=="e_MAN_L"))
+goodamps <- which(!is.na((m[ind,])))
+
+ind <- which((rownames(m)=="eDNA_SofiaR_P"))
+goodamps <- which(!is.na((m[ind,]))) 
+
+ind <- which((rownames(m)=="eDNA_SOFR_1z"))
+goodamps <- which(!is.na((m[ind,])))
+
+
+
+length(goodamps)
+
+#for individual but removing the polymorphic loci.
+goodamps <- goodamps[-c(8,10,12)]
+
+
+m_trim_g <- m[,goodamps]
+
+#m_trim_g <- m_trim_g[c(1,2,3,4,5,6,7,8,9,10,11,as.numeric(ind),20,21),]
+
+
+dim(m_trim_g)
+#for e_150608_JL
+#14x12 after deleting WG bias amplicons
+
+#for e_160608_AR
+#14x5
+
+#for e_MAN_L
+#14 x 9 after deleting WG bias amps
+
+#for eDNA_SofiaR_P
+#14 x 6
+
+#14x5 for eDNA_SOFR_1z
+
+
+
+
+#18x37 includes 5 samples with at least 5 and the amps present in at least one of the samples.
+
+
+#now align and and write out.
+
+for (i in 1:ncol(m_trim_g)){
+  
+  locus_list <- m_trim_g[!is.na(m_trim_g[,i]),i]
+  locus_seq <- DNAStringSet(locus_list)
+  locus_align <- muscle::muscle(locus_seq)
+  locus_align <- DNAStringSet(locus_align)
+  writeXStringSet(locus_align, paste(colnames(m_trim_g)[i], "_align_eDNA_SOFR_1z.fasta", sep=""))
+  
+}
+
+
+
+```
+
+
+That was good for making the gene trees. Now if we want to use the concatenation method this is how we do it:
+
+Ok, now that we have a clean data matrix (m_trim) we can now fill in the rest of the entries with NNNs. We will use the max amplicon length for the number of times to repeat the Ns
+
+```{r}
+m_trim <- m_trim_g
+
+for (i in 1:ncol(m_trim)){
+  
+  length_seq <- max(nchar(m_trim[,i]),na.rm=T)
+  
+  for (j in 1:nrow(m_trim)){
+    
+    if (is.na(m_trim[j,i])){
+      m_trim[j,i] <- paste(replicate(length_seq, "N"), collapse = "")
+    }
+    
+  }}
+
+
+```
+
+ align all loci separately and then concatenate each locus to form the alignemnt. 
+
+```{r}
+#makes a copy of m_trim to replace with aligned seqs
+m_trim_align <- m_trim
+
+#aligns all seqs and popualates new df with the aligned seq
+for (i in 1:ncol(m_trim)){
+  
+  locus_seq <- DNAStringSet(m_trim[,i])
+  locus_align <- muscle::muscle(locus_seq)
+  locus_align <- DNAStringSet(locus_align)
+  
+    for (j in 1:length(locus_align)){
+    
+    m_trim_align[j,i] <- as.character(locus_align[j])
+     }
+  }
+
+
+#concatenate
+cat_seqs_align <- matrix(NA, nrow=nrow(m_trim_align), ncol=2)
+
+cat_seqs_align[,1] <- rownames(m_trim_align)
+
+cat_seqs_align[,2] <- apply(m_trim_align, 1, paste, collapse="")
+
+cat_seqs_align_df <- as.data.frame(cat_seqs_align)
+
+df.fasta = dataframe2fas(cat_seqs_align_df, file="e_MAN_L_9amp_cat_seqs_align.fasta")
+```
+
+
+Here I want to explore picking a sample, pulling out only samples that share that sequence, and making a tree
+
+```{r}
+#Let's start with sample number 1
+
+sample1 <- 'eDNA_SofiaR_P'
+
+#find the amps where sample1 has data
+sample1_amps <- which(!is.na(m[sample1,]))
+#get rid of amp200
+#sample1_amps <- sample1_amps[-24]
+length(sample1_amps)
+
+#trim m to that set
+m_trim_samp <- m[,sample1_amps]
+
+length_table_samp <- tibble(sample = "", length=0)
+
+for (i in 1: nrow(m_trim_samp)){
+    length_table_samp <- add_row(length_table_samp, sample=rownames(m_trim_samp)[i], length=sum(!is.na(m_trim_samp[i,])))
+  }
+
+#PULL OUT ONLY SAMPLES WHERE AT LEAST 80 PERCENT OF THE AMPS ARE PRESENT
+matchin_samps <- filter(length_table_samp, length>=0.8*length(sample1_amps))
+
+#subset m_trim_samp based on this cutoff
+m_samp <- subset(m_trim_samp, rownames(m_trim_samp) %in% matchin_samps$sample)
+dim(m_samp)
+#44x34
+
+#aligns all seqs (removing those with NAs) and writes them out as a separate fasta
+for (i in 1:ncol(m_samp)){
+  
+  locus_list <- m_samp[!is.na(m_samp[,i]),i]
+  locus_seq <- DNAStringSet(locus_list)
+  locus_align <- muscle::muscle(locus_seq)
+  locus_align <- DNAStringSet(locus_align)
+  writeXStringSet(locus_align, paste(colnames(m_samp)[i], "_align_e_150608_JL.fasta", sep=""))
+  
+}
+
+
+#add n for concatenated analysis
+for (i in 1:ncol(m_samp)){
+  
+  length_seq <- n_bases_trim[i,4]
+  
+  for (j in 1:nrow(m_samp)){
+    
+    if (is.na(m_samp[j,i])){
+      m_samp[j,i] <- paste(replicate(length_seq, "N"), collapse = "")
+    }
+    
+  }}
+
+#makes a copy of m_trim to replace with aligned seqs
+m_samp_align <- m_samp
+
+#aligns all seqs and popualates new df with the aligned seq
+for (i in 1:ncol(m_samp)){
+  
+  locus_seq <- DNAStringSet(m_samp[,i])
+  locus_align <- muscle::muscle(locus_seq)
+  locus_align <- DNAStringSet(locus_align)
+  
+    for (j in 1:length(locus_align)){
+    
+    m_samp_align[j,i] <- as.character(locus_align[j])
+     }
+  }
+
+
+#concatenate
+cat_seqs_align <- matrix(NA, nrow=nrow(m_samp_align), ncol=2)
+
+cat_seqs_align[,1] <- rownames(m_samp)
+
+cat_seqs_align[,2] <- apply(m_samp_align, 1, paste, collapse="")
+
+cat_seqs_align_df <- as.data.frame(cat_seqs_align)
+
+df.fasta = dataframe2fas(cat_seqs_align_df, file="SERDP_1_cat_seqs_align.fasta")
+
+
+```
+
+
+
+

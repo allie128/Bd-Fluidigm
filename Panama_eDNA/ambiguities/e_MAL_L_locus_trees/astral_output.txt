@@ -1,0 +1,89 @@
+(base) alliebyrne@Allies-MacBook-Air-2 Astral % java -jar astral.5.7.5.jar -i ~/OneDrive/Documents/byrne_allison/Bd-Fluidigm/Panama_eDNA/ambiguities/e_MAL_L_locus_trees/e_MAN_L_cat_trees_collapse10_export.newick -o ~/OneDrive/Documents/byrne_allison/Bd-Fluidigm/Panama_eDNA/ambiguities/e_MAL_L_locus_trees/e_MAN_L_cat_trees_astral.tre
+
+================== ASTRAL ===================== 
+
+This is ASTRAL version 5.7.5
+Gene trees are treated as unrooted
+12 trees read from /Users/alliebyrne/OneDrive/Documents/byrne_allison/Bd-Fluidigm/Panama_eDNA/ambiguities/e_MAL_L_locus_trees/e_MAN_L_cat_trees_collapse10_export.newick
+index0
+All output trees will be *arbitrarily* rooted at e_MAN_L
+
+======== Running the main analysis
+Number of taxa: 14 (14 species)
+Taxa: [e_MAN_L, DMP1076, RFM272, DCB609, RFM380, Bd_UM142, Bd_Campana, Bd_Pc_CN_JLV, Bd_MexMkt, Bd_CJB4, Bd_JEL310, Bd_RioMaria, Bd_KB347, Bd_LFT001_10]
+Taxon occupancy: {e_MAN_L=12, Bd_Campana=11, DCB609=12, Bd_MexMkt=11, Bd_CJB4=11, DMP1076=12, Bd_UM142=11, Bd_RioMaria=11, RFM380=9, Bd_Pc_CN_JLV=11, Bd_KB347=12, Bd_LFT001_10=10, Bd_JEL310=11, RFM272=9}
+Number of gene trees: 12
+4 trees have missing taxa
+Calculating quartet distance matrix (for completion of X)
+Species tree distances calculated ...
+Will attempt to complete bipartitions from X before adding using a distance matrix.
+Building set of clusters (X) from gene trees 
+------------------------------
+gradient0: 131
+Number of Clusters after addition by distance: 131
+calculating extra bipartitions to be added at level 1 ...
+Adding to X using resolutions of greedy consensus ...
+Limit for sigma of degrees:400
+polytomy size limit : 12
+discarded polytomies:  [3, 3, 3, 3, 5, 8, 12]
+Threshold 0.0:
+polytomy of size 3; rounds with additions with at least 5 support: 0; clusters: 135
+Threshold 0.01:
+polytomy of size 3; rounds with additions with at least 5 support: 0; clusters: 135
+Threshold 0.02:
+polytomy of size 3; rounds with additions with at least 5 support: 0; clusters: 135
+Threshold 0.05:
+polytomy of size 3; rounds with additions with at least 5 support: 0; clusters: 135
+Threshold 0.1:
+polytomy of size 5; rounds with additions with at least 5 support: 0; clusters: 151
+Threshold 0.2:
+polytomy of size 8; rounds with additions with at least 5 support: 0; clusters: 153
+Threshold 0.3333333333333333:
+polytomy of size 12; rounds with additions with at least 5 support: 0; clusters: 153
+max k is :0
+Number of Clusters after addition by greedy: 153
+gradient0 in heuristiic: 153
+partitions formed in 0.315 secs
+Dynamic Programming starting after 0.315 secs
+Using tree-based weight calculation.
+Using polytree-based weight calculation.
+Polytree max score: 4242
+Polytree building time: 0.015 seconds.
+Number of quartet trees in the gene trees: 4242
+Size of largest cluster: 14
+Greedy score: 2759
+estimationFactor: 1.5375135918811162
+Sub-optimal score: 2759
+Total Number of elements weighted: 242
+Normalized score (portion of input quartet trees satisfied before correcting for multiple individuals): 0.6742102781706742
+Optimization score: 2860
+Optimal tree inferred in 0.409 secs.
+(RFM380,(RFM272,(((DMP1076,DCB609),(Bd_KB347,(Bd_UM142,Bd_LFT001_10))),(e_MAN_L,(Bd_CJB4,((Bd_Pc_CN_JLV,Bd_MexMkt),(Bd_JEL310,(Bd_Campana,Bd_RioMaria))))))));
+Final quartet score is: 2860
+Final normalized quartet score is: 0.6742102781706742
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_Pc_CN_JLV, Bd_MexMkt}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_Campana, Bd_RioMaria}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_Campana, Bd_JEL310, Bd_RioMaria}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_Campana, Bd_Pc_CN_JLV, Bd_MexMkt, Bd_JEL310, Bd_RioMaria}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_Campana, Bd_Pc_CN_JLV, Bd_MexMkt, Bd_CJB4, Bd_JEL310, Bd_RioMaria}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 12:
+	{DMP1076, DCB609}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 10:
+	{Bd_UM142, Bd_LFT001_10}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 11:
+	{Bd_UM142, Bd_KB347, Bd_LFT001_10}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 9:
+	{DMP1076, DCB609, Bd_UM142, Bd_KB347, Bd_LFT001_10}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 9:
+	{RFM272, RFM380}
+You may want to ignore posterior probabilities and other statistics related to the following branch branch because the effective number of genes impacting it is only 9:
+	{DMP1076, RFM272, DCB609, RFM380, Bd_UM142, Bd_KB347, Bd_LFT001_10}
+Extended species tree:
+(e_MAN_L,((Bd_CJB4,((Bd_Pc_CN_JLV,Bd_MexMkt)0.74:0.3529643645421968,(Bd_JEL310,(Bd_Campana,Bd_RioMaria)0.77:0.44816188733068674)0.4:0.0)0.34:0.0)0.44:0.055488685617653244,(((DMP1076,DCB609)1:1.3555227024531369,(Bd_KB347,(Bd_UM142,Bd_LFT001_10)0.79:0.44895022004790314)0.71:0.2998034329841259)0.44:0.031748698314580416,(RFM272,RFM380)1:1.2628133043488692)0.56:0.14424960884454666));
+Weight calculation took 0.017997913 secs
+ASTRAL finished in 0.504 secs
